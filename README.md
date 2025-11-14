@@ -28,6 +28,9 @@ or run python scripts
 For example, if you want to make a new branch from main do
 - `git pull` on main
 - `git checkout -b your_branch` which creates and switches to a new local branch
-- Write some code
+- Write some code in `your_script.py`
+- `git add your script.py`
 - `git commit` will store your code in the branch with a message you type (you may need to change your text editor, google it)
 - `git push` will push the changes to Github so other people can view and pull.
+
+When we need to start merging our code into main, I can help with that. We can use pull requests to help avoid conflicts.
