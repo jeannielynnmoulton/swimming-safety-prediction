@@ -24,29 +24,27 @@ def get_dataset_ids():
     # this dataset id list might be useful for iterating over data later
     return available_dataset_summary.values.tolist()
 
-def get_sites_datafile_locations(datasets: list) -> dict:
+def get_sites_datafile_locations(datasets: list, dir: str) -> dict:
     """Return dict of id: datafile file location"""
-    return {id: "data/data_{0}.json".format(id) for id in datasets}
-
+    return {id: "{0}/data_{1}.json".format(dir, id) for id in datasets}
 
 def get_sites_as_json(datasets: list) -> list:
-    """Makes a new directory "data" in the root of the repository. Extracts datasets from
+    """Makes a new directory "site_data" in the root of the repository. Extracts datasets from
     https://oxfordrivers.ceh.ac.uk/getSites?datasetID=X for dataset X for all datasets provided
     in the arguments. Saves a file of the data in json format
 
     This function should only be run once. It will overwrite data.
     Returns a list of paths to json files created."""
 
-    dir = "data"
+    dir = "site_data"
     if not os.path.exists(dir):
         os.mkdir(dir)
     responses = {}
-    dataset_id_files = get_sites_datafile_locations(datasets)
+    dataset_id_files = get_sites_datafile_locations(datasets, dir)
     for id, file in dataset_id_files.items():
         responses[id] = requests.get("https://oxfordrivers.ceh.ac.uk/getSites?datasetID={0}".format(id)).json()
         with open(file, 'w', encoding='utf-8') as f:
             json.dump(responses[id], f, ensure_ascii=False, indent=4)
     return list(dataset_id_files.values())
-
 
 
