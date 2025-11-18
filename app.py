@@ -212,4 +212,22 @@ for dataset in ecoli_datasets_ids:
     dataset_id = dataset["code"]
     determinand_id = dataset["id"]
     for site in get_sites_for_dataset_as_pandas(dataset_id)["properties.id"]:
-        ecoli_timeseries_dfs[(site, dataset_id)] = get_timeseries_for_dataset_site_determinand_as_pandas(site, dataset_id, determinand_id)
+        df = get_timeseries_for_dataset_site_determinand_as_pandas(site, dataset_id, determinand_id)
+        if dataset_id == 'ea_bathing_water':
+            # reshape dataframe to have datetime and ecoli/enterococci columns
+            columns = ['sample date time', 'escherichia coli count', 'escherichia coli qualifier', 'intestinal enterococci count', 'intestinal enterococci qualifier'] #unique columns, excluding record date which is included in sample date time
+            df_new = pd.DataFrame()
+            for col in columns:
+                mask = df.columns.str.contains(f'{col}.*')
+                df_new[col] = pd.Series(df.loc[:, mask].T.values.ravel())
+            #format datetime to match
+            df_new['datetime'] = pd.to_datetime(df_new['sample date time'])
+            df_new = df_new.drop(columns=['sample date time'])
+            ecoli_timeseries_dfs[(site, dataset_id)] = df_new
+        else:
+            try:
+                df['datetime'] = pd.to_datetime(df['datetime'])
+            except Exception as e:
+                pass
+                #print(f"Error for site {site} dataset {dataset_id}: {e}") #site 1743499042454x452904883018006500 dataset wtrt is empty
+            ecoli_timeseries_dfs[(site, dataset_id)] = df
