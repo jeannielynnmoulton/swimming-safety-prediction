@@ -189,6 +189,21 @@ def get_data_for_date_dataset_as_pandas(dataset: str, date: datetime.date, displ
         print(df)
     return df
 
+def split_col(s):
+    #split into value and qualifier like the ea_bathing_water dataset
+
+    s = s.astype(str).str.strip()
+
+    # Extract qualifier
+    qualifier = s.str.extract(r'([<>])')[0].map({
+        '<': 'lessThan',
+        '>': 'greaterThan'
+    }).fillna('actual')
+
+    # Extract numeric part (digits only)
+    numeric = pd.to_numeric(s.str.extract(r'(\d+)')[0], errors='coerce')
+
+    return numeric, qualifier
 
 ##### EXAMPLE USAGE #####
 # get dataset info as pandas
@@ -219,6 +234,7 @@ def get_ecoli_datasets() -> dict:
         determinand_id = dataset["id"]
         for site in get_sites_for_dataset_as_pandas(dataset_id)["properties.id"]:
             df = get_timeseries_for_dataset_site_determinand_as_pandas(site, dataset_id, determinand_id)
+            #get both datasets into consistent format
             if dataset_id == 'ea_bathing_water':
                 # reshape dataframe to have datetime and ecoli/enterococci columns
                 columns = ['sample date time', 'escherichia coli count', 'escherichia coli qualifier', 'intestinal enterococci count', 'intestinal enterococci qualifier'] #unique columns, excluding record date which is included in sample date time
@@ -229,12 +245,18 @@ def get_ecoli_datasets() -> dict:
                 #format datetime to match
                 df_new['datetime'] = pd.to_datetime(df_new['sample date time'])
                 df_new = df_new.drop(columns=['sample date time'])
+                df_new = df_new.sort_values(by='datetime')
                 ecoli_timeseries_dfs[(site, dataset_id)] = df_new
             else:
                 try:
                     df['datetime'] = pd.to_datetime(df['datetime'])
+                    df['escherichia coli count'], df['escherichia coli qualifier'] = split_col(df['value']) #split value into count and qualifier e.g. < 10 (value) -> 10 (count) and lessThan (qualifier)
+                    df = df.drop(columns=['value'])
+                    df = df.sort_values(by='datetime')
+                    ecoli_timeseries_dfs[(site, dataset_id)] = df
                 except Exception as e:
                     pass
                     #print(f"Error for site {site} dataset {dataset_id}: {e}") #site 1743499042454x452904883018006500 dataset wtrt is empty
-                ecoli_timeseries_dfs[(site, dataset_id)] = df
     return ecoli_timeseries_dfs
+
+
