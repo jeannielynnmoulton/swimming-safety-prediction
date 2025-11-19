@@ -9,8 +9,10 @@ numpy = "*"
 pandas = "*"
 matplotlib = "*"
 jupyter = "*"
+geopandas = "*"
 
 [dev-packages]
+ipykernel = "*"
 
 [requires]
 python_version = "3.13"
