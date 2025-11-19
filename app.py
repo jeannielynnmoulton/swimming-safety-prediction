@@ -4,6 +4,7 @@ import os.path
 
 import pandas as pd
 import requests
+from matplotlib import pyplot as plt
 
 ##### DATASET EXTRACTION #####
 datasets_url = "https://oxfordrivers.ceh.ac.uk/getDatasets"
@@ -204,30 +205,36 @@ df_timeseries_Wolvercote_sonde_turbidity = get_timeseries_for_dataset_site_deter
 df_date_rainfall_2024_07_31 = get_data_for_date_dataset_as_pandas("rainfall", datetime.date(2024, 7, 31), display=False)
 
 ##### GET DATA FOR ECOLI #####
-# get time series that contain ecoli info
-# yields -> [[{'code': 'ea_bathing_water', 'id': 'EC', 'column': 'escherichia coli count'}, {'code': 'wtrt', 'id': 'EC', 'column': 'escherichia coli count'}]]
-ecoli_datasets_ids = df_determinands[df_determinands["name"].str.contains("coli", case=False, na=False)]["datasets"].values[0]
-ecoli_timeseries_dfs = {}
-for dataset in ecoli_datasets_ids:
-    dataset_id = dataset["code"]
-    determinand_id = dataset["id"]
-    for site in get_sites_for_dataset_as_pandas(dataset_id)["properties.id"]:
-        df = get_timeseries_for_dataset_site_determinand_as_pandas(site, dataset_id, determinand_id)
-        if dataset_id == 'ea_bathing_water':
-            # reshape dataframe to have datetime and ecoli/enterococci columns
-            columns = ['sample date time', 'escherichia coli count', 'escherichia coli qualifier', 'intestinal enterococci count', 'intestinal enterococci qualifier'] #unique columns, excluding record date which is included in sample date time
-            df_new = pd.DataFrame()
-            for col in columns:
-                mask = df.columns.str.contains(f'{col}.*')
-                df_new[col] = pd.Series(df.loc[:, mask].T.values.ravel())
-            #format datetime to match
-            df_new['datetime'] = pd.to_datetime(df_new['sample date time'])
-            df_new = df_new.drop(columns=['sample date time'])
-            ecoli_timeseries_dfs[(site, dataset_id)] = df_new
-        else:
-            try:
-                df['datetime'] = pd.to_datetime(df['datetime'])
-            except Exception as e:
-                pass
-                #print(f"Error for site {site} dataset {dataset_id}: {e}") #site 1743499042454x452904883018006500 dataset wtrt is empty
-            ecoli_timeseries_dfs[(site, dataset_id)] = df
+def get_ecoli_datasets() -> dict:
+    """
+    Returns a dictionary with keys as tuple of (site_id, dataset_id) and values
+    of time series data
+    """
+    # get time series that contain ecoli info
+    # yields -> [[{'code': 'ea_bathing_water', 'id': 'EC', 'column': 'escherichia coli count'}, {'code': 'wtrt', 'id': 'EC', 'column': 'escherichia coli count'}]]
+    ecoli_datasets_ids = df_determinands[df_determinands["name"].str.contains("coli", case=False, na=False)]["datasets"].values[0]
+    ecoli_timeseries_dfs = {}
+    for dataset in ecoli_datasets_ids:
+        dataset_id = dataset["code"]
+        determinand_id = dataset["id"]
+        for site in get_sites_for_dataset_as_pandas(dataset_id)["properties.id"]:
+            df = get_timeseries_for_dataset_site_determinand_as_pandas(site, dataset_id, determinand_id)
+            if dataset_id == 'ea_bathing_water':
+                # reshape dataframe to have datetime and ecoli/enterococci columns
+                columns = ['sample date time', 'escherichia coli count', 'escherichia coli qualifier', 'intestinal enterococci count', 'intestinal enterococci qualifier'] #unique columns, excluding record date which is included in sample date time
+                df_new = pd.DataFrame()
+                for col in columns:
+                    mask = df.columns.str.contains(f'{col}.*')
+                    df_new[col] = pd.Series(df.loc[:, mask].T.values.ravel())
+                #format datetime to match
+                df_new['datetime'] = pd.to_datetime(df_new['sample date time'])
+                df_new = df_new.drop(columns=['sample date time'])
+                ecoli_timeseries_dfs[(site, dataset_id)] = df_new
+            else:
+                try:
+                    df['datetime'] = pd.to_datetime(df['datetime'])
+                except Exception as e:
+                    pass
+                    #print(f"Error for site {site} dataset {dataset_id}: {e}") #site 1743499042454x452904883018006500 dataset wtrt is empty
+                ecoli_timeseries_dfs[(site, dataset_id)] = df
+    return ecoli_timeseries_dfs
