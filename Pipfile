@@ -10,6 +10,10 @@ pandas = "*"
 matplotlib = "*"
 jupyter = "*"
 geopandas = "*"
+scikit-learn = "*"
+lightgbm = "*"
+xgboost = "*"
+cartopy = "*"
 
 [dev-packages]
 ipykernel = "*"
