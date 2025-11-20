@@ -163,6 +163,31 @@ def get_timeseries_for_dataset_site_determinand_as_pandas(site: str, dataset: st
         print(df)
     return df
 
+##### TIMESERIES EXTRACTION WITH DATE #####
+timeseries_site_dataset_date_url = "https://oxfordrivers.ceh.ac.uk/getTimeseries?siteID={0}&date={1}&datasetID={2}" # requires using .format(site, date (yyyy-mm-dd), dataset)
+timeseries_site_dataset_date_json_file_base = os.path.join(timeseries_dir, "timeseries_{0}_{1}_{2}.json") # requires using .format(site, date, dataset)
+
+def get_timeseries_for_date_dataset_as_json(site: str, dataset: str, date: datetime.date):
+    date_str = date.strftime('%Y-%m-%d')
+    timeseries_response_json = requests.get(timeseries_site_dataset_date_url.format(site, date_str, dataset)).json()
+    if not os.path.exists(timeseries_dir):
+        os.mkdir(timeseries_dir)
+    with open(timeseries_site_dataset_date_json_file_base.format(site, date_str, dataset),'w', encoding='utf-8') as f:
+        json.dump(timeseries_response_json, f, ensure_ascii=False, indent=4)
+
+def get_timeseries_for_date_dataset_as_pandas(site: str, dataset: str, date: datetime.date, display=False):
+    date_str = date.strftime('%Y-%m-%d')
+    filename = timeseries_site_dataset_date_json_file_base.format(site, date_str, dataset)
+    if not os.path.exists(filename):
+        get_timeseries_for_date_dataset_as_json(site, dataset, date)
+    with open(filename) as f:
+        date_response_json = json.load(f)
+    df = pd.json_normalize(date_response_json["data"])
+    if display:
+        print(df.info())
+        print(df)
+    return df
+
 ##### DATA FOR DATE EXTRACTION #####
 date_dataset_url = "https://oxfordrivers.ceh.ac.uk/getDataForDate?datasetID={0}&date={1}" # requires using .format(dataset, date (yyyy-mm-dd)
 date_dataset_dir = "date_data"
@@ -205,6 +230,51 @@ def split_col(s):
 
     return numeric, qualifier
 
+def split_interval_across_days(start, end):
+    #splits edm spills into chunks (i.e. if spill goes over multiple days, it splits into multiple entries for each day with hours for that day)
+    results = []
+    current = start
+
+    while current.date() < end.date():
+        # end of current day
+        day_end = pd.Timestamp.combine(current.date(), datetime.time(23, 59, 59))
+        hours = (day_end - current).total_seconds() / 3600
+        results.append((current.date(), hours))
+        current = day_end + pd.Timedelta(seconds=1)
+
+    # final partial day
+    final_hours = (end - current).total_seconds() / 3600
+    results.append((current.date(), final_hours))
+
+    return results
+
+def process_edm(df):
+    #split into each spill event
+    events = df[df['value'].isin(['Start', 'Stop'])].copy()
+    events = events.sort_values('datetime').reset_index(drop=True)
+    events['next_time'] = events['datetime'].shift(-1)
+    events['next_value'] = events['value'].shift(-1)
+    pairs = events[(events['value'] == 'Start') & (events['next_value'] == 'Stop')].copy()
+
+    #calculate spill durations per day
+    rows = []
+    for _, row in pairs.iterrows():
+        start = row['datetime']
+        end = row['next_time']
+        chunks = split_interval_across_days(start, end)
+        for d, h in chunks:
+            rows.append((d, h))
+
+    #final aggregation into dataframe, filling gaps between first and last spill with 0 spill hours
+    daily_spill = pd.DataFrame(rows, columns=['date', 'duration_hours'])
+    daily_spill['date'] = pd.to_datetime(daily_spill['date'])
+    daily_spill = daily_spill.groupby('date')['duration_hours'].sum().to_frame()
+    full_time = pd.date_range(start=daily_spill.index.min(),end=daily_spill.index.max(),freq='D')
+    daily_spill = daily_spill.reindex(full_time, fill_value=0)
+    daily_spill = daily_spill.round(2).reset_index().rename(columns={'index': 'datetime'})
+
+    return daily_spill
+
 ##### EXAMPLE USAGE #####
 # get dataset info as pandas
 df_datasets = get_datasets_as_pandas(display=False)
@@ -218,6 +288,8 @@ df_timeseries_Oxford_fft = get_timeseries_for_dataset_and_site_as_pandas("Oxford
 df_timeseries_Wolvercote_sonde_turbidity = get_timeseries_for_dataset_site_determinand_as_pandas("E01612A", "ea_wq_sonde", "turbidity", display=False)
 # get data for date example
 df_date_rainfall_2024_07_31 = get_data_for_date_dataset_as_pandas("rainfall", datetime.date(2024, 7, 31), display=False)
+# get timeseries for date example
+df_timeseries_Cassington_edm_2021_01_01 = get_timeseries_for_date_dataset_as_pandas('Cassington', 'edm', datetime.date(2021, 1, 1), display=False)
 
 ##### GET DATA FOR ECOLI #####
 def get_ecoli_datasets() -> dict:
