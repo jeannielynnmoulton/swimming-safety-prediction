@@ -1,4 +1,18 @@
-# swimming-safety-prediction
+# Hack The River 2025 - Swimming Safety Prediction Team
+
+This repository contains the code developed by the swimming safety prediction team for the Hack The River hackathon organised by UKCEH, Thames21 and The Rivers Trust.
+
+We use data from the Oxford Rivers Portal (https://oxfordrivers.ceh.ac.uk/) to explore the factors which control e. coli polution in Oxford's rivers and wild swimming spots. Because e. coli data is infrquently recorded, and has a two day latency, we use river level and rainfall to predict e. coli levels. A future operational model based upon the work here would enable members of the public to access real-time forecasts of e. coli, promoting safe wild swimming in Oxfordshire.
+
+## Code Organisation
+
+The code is organised as follows:
+
+### app.py
+
+Contains utilities to download data from the Oxford Rivers Portal and reformat the files into user friendly Pandas dataframes.
+
+### 
 
 ## Using pipenv
 
