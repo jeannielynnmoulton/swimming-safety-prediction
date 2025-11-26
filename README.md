@@ -12,7 +12,24 @@ The code is organised as follows:
 
 Contains utilities to download data from the Oxford Rivers Portal and reformat the files into user friendly Pandas dataframes.
 
-### 
+### EcoliTurbidityInvestigation.py
+
+Explores relationship between e. coli and turbidity at Wolvercote bathing site.
+
+### RainfallInvestigation.ipynb
+
+Explores relationship between e. coli and other potential predictors (rainfall, dissolved organic matter) at Wolvercote bathing site.
+
+### predicting_ecoli.ipynb
+
+Training and testing three machine learning models (Random Forest, LightGBM, XGBoost), aiming to predict e. coli from rainfall and river level.
+
+## Usage
+
+- Download or fork the repository to your machine
+- Install pipenv (https://pipenv.pypa.io/en/latest/quick_start.html).
+- Run pipenv install in the terminal. This will create a virtual environment on your machine from the piplock file.
+- .py scripts can be run using e.g. pipenv run python app.py in the terminal
 
 ## Using pipenv
 
